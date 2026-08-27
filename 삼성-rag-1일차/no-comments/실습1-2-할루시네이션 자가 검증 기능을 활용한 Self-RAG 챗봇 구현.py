@@ -202,7 +202,9 @@ AI의 답변: {generation}
 # 각각의 State를 is_hallucinated 함수에 넣어 평가 결과를 출력
 is_hallucinated(relevant_state), is_hallucinated(irrelevant_state)
 
-##################
+#########################################
+################## 본격적으로 노드에서 활용할 함수들 정의하기 시작
+#########################################
 
 excel_data_name = "한국지능정보사회진흥원_인공지능 학습용 데이터 구축 현황_20210104.csv"
 pdf_data_name = "RE177_2023년 국내외 인공지능 산업 동향 연구_2장.pdf"
@@ -251,6 +253,7 @@ def run_code(input_code: str):
                                 
     return output.getvalue()
 
+# 질문에 답할 판다스 코드를 LLM에게 만들게 한 뒤 실행합니다.
 def query(state: State) -> State:
 
     print("---데이터 쿼리---")                         
@@ -280,6 +283,7 @@ def query(state: State) -> State:
     data = run_code(code)
     return {"question": question, "code": code, "data": data, "generation": code}
 
+# 코드 실행 결과를 자연어 답변으로 바꿉니다.
 def answer_with_data(state: State) -> State:
                               
     print("---데이터 기반 답변 생성---")                         
@@ -312,6 +316,7 @@ def answer(state: State) -> State:
 
     return {"question": question, "generation": llm.invoke(question).content}
 
+# Chroma 벡터DB에서 문서를 가져와 하나의 문자열로 합칩니다.
 def retrieval(state: State) -> State:
 
     def get_retrieved_text(docs):
@@ -327,6 +332,7 @@ def retrieval(state: State) -> State:
 
     return {"question": question, "data": data}
 
+# 검색 문서를 컨텍스트로 넣어 답변을 생성합니다.
 def answer_with_retrieved_data(state: State) -> State:
                              
     print(
@@ -347,6 +353,8 @@ def answer_with_retrieved_data(state: State) -> State:
     generation = qa_chain.invoke({"data": data, "question": question})
     return {"question": question, "data": data, "generation": generation}
 
+# 노드의 시작 지점으로,
+# 질문을 받아서 RAG, 엑셀 데이터, 일반 답변 중 어떤 것을 활용할지 결정합니다.
 def init_answer(state: State) -> State:
                                
     route_system_message = """당신은 사용자의 질문에 RAG, 엑셀 데이터 중 어떤 것을 활용할 수 있는지 결정하는 전문가입니다.
@@ -366,6 +374,9 @@ def init_answer(state: State) -> State:
     route = router_chain.invoke({"question": question})["route"]
     return {"question": question, "generation": route}
 
+
+## 진짜 본격적으로 노드에서 활용할 함수들 초기화 하기 시작
+
 workflow = StateGraph(State)
                         
 workflow.add_node("init_answer", init_answer)
@@ -383,6 +394,9 @@ workflow.add_edge("plain_answer", END)
 workflow.add_edge("answer_with_data", END)
 workflow.add_edge("excel_data", "answer_with_data")
 
+# case-1 
+# 람다식을 이용하여 바로 조건을 평가하고,
+# 그에 따라 다음 노드로 이동하도록 설정
 workflow.add_conditional_edges(
     "init_answer",
     lambda state: state["generation"]
@@ -396,6 +410,23 @@ workflow.add_conditional_edges(
     },
 )
 
+# case-2
+# 위의 람다식을 쓰고 싶지 않을 경우 아래와 같이 쓸 수 있다.
+# def route_from_init_answer(state: State) -> str:
+#     """init_answer가 저장한 route 값을 읽어 다음 노드 이름을 반환한다."""
+#     return state["generation"].lower().strip()
+
+
+# workflow.add_conditional_edges(
+#     "init_answer",
+#     route_from_init_answer,
+#     {
+#         "excel_data": "excel_data",
+#         "rag": "rag",
+#         "plain_answer": "plain_answer",
+#     },
+# )
+
 workflow.add_conditional_edges(
     "rag",
     lambda state: is_data_relevant(state)["relevant"],
@@ -406,50 +437,71 @@ workflow.add_conditional_edges(
 )
 
 def judge_answer(state: State) -> str:
-    print("---답변 평가---")                             
+    """검색 기반 답변을 검증하고, 다음 분기 이름을 반환한다."""
+    print("---답변 평가---")
+
+    #######################################
+    # 1. 근거 문서가 답변을 뒷받침하는지 검사
     try:
         hallucinated = is_hallucinated(state)["answer"]
-                                  
+
+        # LLM이 "true" 문자열을 반환한 경우 bool로 변환
         if type(hallucinated) == str:
             hallucinated = hallucinated.lower() == "true"
+
         print(
-            "---주어진 답변은" + " 진실입니다.---"
+            "---주어진 답변은 진실입니다.---"
             if hallucinated == True
-            else " 진실이 아닙니다.---"
+            else "---주어진 답변은 진실이 아닙니다.---"
         )
+
+    # JSON에 "answer" 키가 없으면 KeyError 발생
     except KeyError:
+        # 평가 결과를 읽을 수 없으므로, 일단 통과로 처리
         hallucinated = True
         print("---주어진 답변이 진실인지 알 수 없습니다.---")
 
+    # 근거가 답변을 지지하지 않음 → 검색 답변을 다시 생성
     if not hallucinated:
-        return "hallucinated"    
+        return "hallucinated"
 
+    #######################################
+    # 2. 답변이 질문에 제대로 답하는지 검사
     try:
         supportive = is_answer_supportive(state)["answer"]
         print(
-            "---주어진 답변은 " + "지원적입니다.---"
+            "---주어진 답변은 지원적입니다.---"
             if supportive == "yes"
-            else " 지원적이지 않습니다.---"
+            else "---주어진 답변은 지원적이지 않습니다.---"
         )
+
+    # JSON에 "answer" 키가 없으면 통과 처리
     except KeyError:
         supportive = "yes"
         print("---주어진 답변이 지원적인지 알 수 없습니다.---")
 
+    #######################################
+    # 3. 답변이 사용자에게 유용한지 검사
     try:
         useful = is_answer_useful(state)["useful"]
         print(
-            "---주어진 답변은" + " 유용합니다.---"
+            "---주어진 답변은 유용합니다.---"
             if useful == "yes"
-            else " 유용하지 않습니다.---"
+            else "---주어진 답변은 유용하지 않습니다.---"
         )
+
+    # JSON에 "useful" 키가 없으면 통과 처리
     except KeyError:
         useful = "yes"
         print("---주어진 답변이 유용한지 알 수 없습니다.---")
 
+    # 셋 중 근거 검사는 이미 통과했고,
+    # 질문 적합성 또는 유용성 중 하나만 yes여도 최종 통과
     if (supportive == "yes" or useful == "yes") and hallucinated == True:
         return "yes"
-    else:
-        return "no"
+
+    # 답변 품질이 부족하면 일반 답변 경로로 이동
+    return "no"
 
 workflow.add_conditional_edges(
     "answer_with_retrieval",

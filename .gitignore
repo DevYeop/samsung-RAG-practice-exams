@@ -1,0 +1,14 @@
+.env
+**/.git.backup-*/
+.venv311/
+**/.venv311/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+**/.pytest_cache/
+vectorstore/
+**/vectorstore/
+.streamlit/secrets.toml
+National_AI_Plan.pdf
+workflow_graph.html

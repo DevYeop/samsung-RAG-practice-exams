@@ -37,7 +37,8 @@ NEO4J_PASSWORD = optional_env("NEO4J_PASSWORD")
 from neo4j import GraphDatabase
 from llama_index.core import ServiceContext, StorageContext
 from llama_index.core.indices.knowledge_graph import KnowledgeGraphIndex
-from llama_index.graph_stores.neo4j import Neo4jGraphStore, SimpleGraphStore                       
+# from llama_index.graph_stores.neo4j import Neo4jGraphStore, SimpleGraphStore # 기존 코드: SimpleGraphStore는 neo4j 패키지에 없으므로 ImportError가 발생합니다.
+from llama_index.graph_stores.neo4j import Neo4jGraphStore # 수정 코드: Neo4j 저장소와 인메모리 저장소는 각각의 올바른 모듈에서 가져옵니다.
 from llama_index.core.graph_stores.simple import SimpleGraphStore                            
 from llama_index.core import Settings
 

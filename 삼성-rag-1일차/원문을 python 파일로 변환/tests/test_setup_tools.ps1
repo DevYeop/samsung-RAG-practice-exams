@@ -35,4 +35,10 @@ $noneMissing = Get-MissingOllamaModels `
 
 Assert-Equal -Expected @() -Actual $noneMissing -Message '모든 모델이 있으면 다운로드 대상이 없어야 합니다.'
 
+$pythonPlan = Get-DependencyInstallPlan -Dependency 'Python'
+if ($pythonPlan.WingetId -ne 'Python.Python.3.11') { throw 'Python 3.11 설치용 winget 패키지가 잘못되었습니다.' }
+if ($pythonPlan.DownloadUrl -ne 'https://www.python.org/downloads/release/python-3119/') { throw 'Python 공식 다운로드 안내 URL이 잘못되었습니다.' }
+$ollamaPlan = Get-DependencyInstallPlan -Dependency 'Ollama'
+if ($ollamaPlan.WingetId -ne 'Ollama.Ollama') { throw 'Ollama 설치용 winget 패키지가 잘못되었습니다.' }
+if ($ollamaPlan.DownloadUrl -ne 'https://ollama.com/download/windows') { throw 'Ollama 공식 다운로드 안내 URL이 잘못되었습니다.' }
 Write-Output 'setup tools tests: PASS'

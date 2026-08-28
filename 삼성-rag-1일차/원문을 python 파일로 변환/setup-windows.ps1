@@ -17,13 +17,21 @@ $EnvExamplePath = Join-Path $ProjectRoot '.env.example'
 Import-Module (Join-Path $PSScriptRoot 'SetupTools.psm1') -Force
 
 Write-Host '[1/6] Python 버전을 확인합니다.'
-if (-not (Get-Command py -ErrorAction SilentlyContinue)) {
-    throw 'Python Launcher(py)를 찾을 수 없습니다. Python 3.11.9 설치 시 py launcher를 포함한 뒤 다시 실행하세요: https://www.python.org/downloads/release/python-3119/'
+$PythonPlan = Get-DependencyInstallPlan -Dependency 'Python'
+$PythonReady = $false
+if (Get-Command py -ErrorAction SilentlyContinue) {
+    $DetectedPython = (& py -3.11 -c "import platform; print(platform.python_version())" 2>$null).Trim()
+    $PythonReady = ($LASTEXITCODE -eq 0 -and (Test-ExactPythonVersion -DetectedVersion $DetectedPython -RequiredVersion $RequiredPython))
 }
-
-$DetectedPython = (& py -3.11 -c "import platform; print(platform.python_version())").Trim()
-if ($LASTEXITCODE -ne 0 -or -not (Test-ExactPythonVersion -DetectedVersion $DetectedPython -RequiredVersion $RequiredPython)) {
-    throw "Python $RequiredPython 버전이 필요합니다. 현재 py -3.11 버전: $DetectedPython"
+if (-not $PythonReady) {
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        Write-Host 'Python 3.11.9가 없어 winget으로 설치합니다.'
+        & winget install --id $PythonPlan.WingetId --exact --accept-source-agreements --accept-package-agreements
+        if ($LASTEXITCODE -ne 0) { throw 'Python 3.11.9 설치에 실패했습니다.' }
+        throw 'Python 3.11.9 설치가 완료되었습니다. 새 PowerShell 창에서 이 스크립트를 다시 실행하세요.'
+    }
+    Start-Process $PythonPlan.DownloadUrl
+    throw 'Python 3.11.9가 필요합니다. 공식 다운로드 페이지를 열었습니다. 설치 후 새 PowerShell 창에서 이 스크립트를 다시 실행하세요.'
 }
 
 Write-Host '[2/6] 가상환경을 준비합니다.'
@@ -60,7 +68,15 @@ if (-not (Test-Path -LiteralPath $EnvPath)) {
 
 Write-Host '[5/6] Ollama 모델을 확인합니다.'
 if (-not (Get-Command ollama -ErrorAction SilentlyContinue)) {
-    throw 'Ollama가 설치되어 있지 않습니다. https://ollama.com/download/windows 에서 설치하고 새 PowerShell 창에서 이 스크립트를 다시 실행하세요.'
+    $OllamaPlan = Get-DependencyInstallPlan -Dependency 'Ollama'
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        Write-Host 'Ollama가 없어 winget으로 설치합니다.'
+        & winget install --id $OllamaPlan.WingetId --exact --accept-source-agreements --accept-package-agreements
+        if ($LASTEXITCODE -ne 0) { throw 'Ollama 설치에 실패했습니다.' }
+        throw 'Ollama 설치가 완료되었습니다. Ollama를 실행하고 새 PowerShell 창에서 이 스크립트를 다시 실행하세요.'
+    }
+    Start-Process $OllamaPlan.DownloadUrl
+    throw 'Ollama가 필요합니다. 공식 다운로드 페이지를 열었습니다. 설치 후 Ollama를 실행하고 새 PowerShell 창에서 이 스크립트를 다시 실행하세요.'
 }
 
 $OllamaList = & ollama list 2>&1

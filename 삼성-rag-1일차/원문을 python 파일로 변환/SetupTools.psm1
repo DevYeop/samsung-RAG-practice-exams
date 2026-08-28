@@ -30,4 +30,15 @@ function Get-MissingOllamaModels {
     }
 }
 
-Export-ModuleMember -Function Test-ExactPythonVersion, Get-MissingOllamaModels
+
+function Get-DependencyInstallPlan {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)] [ValidateSet('Python','Ollama')] [string] $Dependency)
+
+    if ($Dependency -eq 'Python') {
+        return [pscustomobject]@{ WingetId = 'Python.Python.3.11'; DownloadUrl = 'https://www.python.org/downloads/release/python-3119/' }
+    }
+
+    return [pscustomobject]@{ WingetId = 'Ollama.Ollama'; DownloadUrl = 'https://ollama.com/download/windows' }
+}
+Export-ModuleMember -Function Test-ExactPythonVersion, Get-MissingOllamaModels, Get-DependencyInstallPlan

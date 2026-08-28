@@ -11,7 +11,7 @@
 
 ## Windows: 자동 설치
 
-1. Python 3.11.9 설치 시 **Python Launcher**를 포함해 설치합니다.
+1. Python 3.11.9 또는 Ollama가 없으면 스크립트가 `winget`으로 자동 설치합니다. `winget`을 사용할 수 없으면 공식 다운로드 페이지를 자동으로 엽니다.
 2. 프로젝트 루트에서 PowerShell을 열고 실행합니다.
 
 ```powershell
@@ -20,7 +20,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\.venv311\Scripts\Activate.ps1
 ```
 
-스크립트는 Python 버전 확인, 가상환경 생성, 패키지 설치, 의존성 충돌 검사까지 수행합니다.
+스크립트는 Python 3.11.9 및 Ollama 준비, 가상환경 생성, 패키지 설치, 의존성 충돌 검사를 수행합니다. 자동 설치 후에는 새 PowerShell 창에서 한 번 더 실행하세요.
 
 ## Windows: 수동 설치
 

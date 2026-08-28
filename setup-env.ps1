@@ -4,13 +4,20 @@ $RequiredPython = '3.11.9'
 $VenvPath = Join-Path $PSScriptRoot '.venv311'
 $RequirementsPath = Join-Path $PSScriptRoot 'requirements.txt'
 
-if (-not (Get-Command py -ErrorAction SilentlyContinue)) {
-    throw 'Python Launcher(py)가 없습니다. Python 3.11.9를 설치한 뒤 다시 실행하세요.'
+$PythonReady = $false
+if (Get-Command py -ErrorAction SilentlyContinue) {
+    $DetectedPython = (& py -3.11 -c "import platform; print(platform.python_version())" 2>$null).Trim()
+    $PythonReady = ($LASTEXITCODE -eq 0 -and $DetectedPython -eq $RequiredPython)
 }
-
-$DetectedPython = (& py -3.11 -c "import platform; print(platform.python_version())").Trim()
-if ($DetectedPython -ne $RequiredPython) {
-    throw "Python $RequiredPython 버전이 필요하지만 $DetectedPython 버전이 감지되었습니다."
+if (-not $PythonReady) {
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        Write-Host 'Python 3.11.9가 없어 winget으로 설치합니다.'
+        & winget install --id Python.Python.3.11 --exact --accept-source-agreements --accept-package-agreements
+        if ($LASTEXITCODE -ne 0) { throw 'Python 3.11.9 설치에 실패했습니다.' }
+        throw 'Python 3.11.9 설치가 완료되었습니다. 새 PowerShell 창에서 이 스크립트를 다시 실행하세요.'
+    }
+    Start-Process 'https://www.python.org/downloads/release/python-3119/'
+    throw 'Python 3.11.9가 필요합니다. 공식 다운로드 페이지를 열었습니다. 설치 후 새 PowerShell 창에서 다시 실행하세요.'
 }
 
 if (Test-Path -LiteralPath $VenvPath) {

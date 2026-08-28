@@ -98,7 +98,38 @@ Copy-Item .env.example .env
 
 `.env`는 개인 비밀값 파일이므로 Git에 올리지 마세요. 이미 `.gitignore`에 제외 규칙이 있습니다.
 
-## 6. 실습 실행
+## 6. Streamlit OpenAI 챗봇 실행
+
+프로젝트 루트의 `app.py`는 OpenAI API를 직접 호출하는 가장 단순한 웹 챗봇입니다. 이 챗봇은 RAG 실습과 별개로 동작합니다.
+
+먼저 프로젝트 루트에서 가상환경을 활성화하고 의존성을 설치합니다.
+
+```powershell
+cd "프로젝트경로"
+.\.venv311\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+루트 `.env` 파일에 OpenAI API 키를 설정합니다. `.env.example`이 없다면 아래 내용을 새 `.env` 파일에 저장해도 됩니다.
+
+```env
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-4o-mini
+```
+
+그다음 아래 명령으로 실행합니다.
+
+```powershell
+streamlit run app.py
+```
+
+브라우저에서 `http://localhost:8501`을 열면 챗봇을 사용할 수 있습니다. 401 인증 오류가 나면, 앱 실행 전 아래 검사기를 실행해 키와 모델 호출을 확인하세요. 키 값은 화면에 출력되지 않습니다.
+
+```powershell
+python verify_openai_key.py
+```
+
+## 7. 실습 실행
 
 가상환경을 활성화한 상태에서 실행합니다. 예를 들어 실습 1-2는 다음과 같습니다.
 
@@ -114,7 +145,7 @@ python ".\실습1-2-할루시네이션 자가 검증 기능을 활용한 Self-RA
 deactivate
 ```
 
-## 7. 자주 발생하는 문제
+## 8. 자주 발생하는 문제
 
 ### `httpx.ConnectError: [WinError 10061]`
 
@@ -153,7 +184,7 @@ Python 3.11.9를 다시 설치하고 설치 화면에서 Python Launcher를 포�
 Set-ExecutionPolicy -Scope Process Bypass
 ```
 
-## 8. 복습 순서 제안
+## 9. 복습 순서 제안
 
 1. 실습 1-1: 로컬 LLM과 벡터 검색으로 기본 RAG 이해
 2. 실습 1-2: 검색 문서 관련성, 답변 유용성, 할루시네이션 검증을 연결한 Self-RAG 이해
